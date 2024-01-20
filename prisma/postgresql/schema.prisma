@@ -1,0 +1,245 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("POSTGRESQL_URL")
+  extensions = [pgcrypto]
+}
+
+model Bot {
+  id                String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  creatorId         String   @db.Uuid
+  institutionId     String   @db.Uuid
+  unityId           String?  @db.Uuid
+  name              String?  @db.VarChar(45)
+  description       String?  @db.Text
+  iconImg           String?  @db.VarChar(500)
+  creativePrecision Int      @default(2)
+  prompt            String?  @db.Text
+  tags              String[]
+  assistantId       String?  @db.VarChar(150)
+
+  institution institution @relation(fields: [institutionId], references: [id])
+  unity       unity?      @relation(fields: [unityId], references: [id])
+  user        user        @relation(fields: [creatorId], references: [id])
+
+  botGenAI        BotGenAI[]
+  BotFolder       BotFolder[]
+  knowLedgeBase   knowLedgeBase?   @relation(fields: [knowLedgeBaseId], references: [id])
+  knowLedgeBaseId String?          @db.Uuid
+  Widget          Widget[]
+  BotVectorStore  BotVectorStore[]
+
+  @@id([id])
+  @@index([institutionId], name: "fk_bot_institution_idx")
+  @@index([unityId], name: "fk_bot_unity_idx")
+  @@index([creatorId], name: "fk_bot_creator_idx")
+  @@map("bot")
+}
+
+model BotGenAI {
+  id                String  @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  botId             String  @db.Uuid
+  genAIModelId      String  @db.Uuid
+  genAIId           String  @db.Uuid
+  genAIKey          String  @db.VarChar(255)
+  genAIOrganization String  @db.VarChar(255)
+  assistantId       String? @db.VarChar(255)
+  isDefault         Boolean @default(false)
+
+  bot        Bot        @relation(fields: [botId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_botgenAI_bot1")
+  genAIModel GenAIModel @relation(fields: [genAIModelId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_botgenAI_genAIModel1")
+  genAI      genAI      @relation(fields: [genAIId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_botgenAI_geAI1")
+
+  @@map("botGenAI")
+}
+
+model BotFolder {
+  id            String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  botId         String        @db.Uuid
+  folderId      String        @db.Uuid
+  kbId          String        @db.Uuid
+  bot           Bot           @relation(fields: [botId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_bot_folder1")
+  kbFolder      kbFolder      @relation(fields: [folderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_folder_bot1")
+  knowledgebase knowLedgeBase @relation(fields: [kbId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bot_folder_kb1")
+
+  @@map("botFolder")
+}
+
+model GenAIModel {
+  id       String     @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  genAIId  String     @db.Uuid
+  name     String?    @db.VarChar(45)
+  genAI    genAI?     @relation(fields: [genAIId], references: [id], map: "fk_genAI_model1")
+  BotGenAI BotGenAI[]
+
+  @@map("genAIModel")
+}
+
+model genAI {
+  id           String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String       @db.VarChar(150)
+  hasAssistant Boolean?     @default(false)
+  genAIModel   GenAIModel[]
+  botGenAI     BotGenAI[]
+
+  @@map("genAI")
+}
+
+model BotVectorStore {
+  id            String  @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  botId         String  @db.Uuid
+  vectorStoreId String  @db.Uuid
+  searchKey     String  @db.VarChar(255)
+  adminKey      String  @db.VarChar(255)
+  isDefault     Boolean @default(false)
+
+  bot         Bot         @relation(fields: [botId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_VectorStore_Bot")
+  vectorStore VectorStore @relation(fields: [vectorStoreId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_Bot_VectorStore")
+
+  @@map("botVectorStore")
+}
+
+model VectorStore {
+  id             String           @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String           @db.VarChar()
+  BotVectorStore BotVectorStore[]
+
+  @@map("vectorStore")
+}
+
+model institution {
+  id                  String @id @default(uuid()) @db.Uuid
+  institutionToolzzId Int    @db.Integer
+
+  aiDefaultModel      String?             @db.VarChar(45)
+  chatStyle           String?             @db.VarChar(45)
+  primaryColorHex     String?             @db.VarChar(45)
+  secondaryColorHex   String?             @db.VarChar(45)
+  lightModeLogoUrl    String?             @db.VarChar(255)
+  lightModeAltLogoUrl String?             @db.VarChar(255)
+  darkModeLogoUrl     String?             @db.VarChar(255)
+  darkModeAltLogoUrl  String?             @db.VarChar(255)
+  faviconUrl          String?             @db.VarChar(255)
+  theme               String?             @db.VarChar(45)
+  subdomain           String?             @unique @db.VarChar(45)
+  customDomain        String?             @db.VarChar(45)
+  apiConversationUrl  String?             @db.VarChar(255)
+  bot                 Bot[]
+  unity               unity[]
+  users               user[]
+  kbFolder            kbFolder[]
+  KnowledgebaseFile   KnowledgebaseFile[]
+
+  @@map("institution")
+}
+
+model knowLedgeBase {
+  id              String  @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  unityId         String  @db.Uuid
+  kbCreatorId     String? @db.Uuid
+  kbInstitutionId String? @db.Uuid
+  kbStatus        Int?    @db.SmallInt
+  kbName          String? @db.VarChar(45)
+  kbDescription   String? @db.Text
+  kbIconImg       String? @db.VarChar(45)
+
+  bot               Bot[]
+  unity             unity               @relation(fields: [unityId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_knowledge_base_unity1")
+  knowLedgeBaseFile KnowledgebaseFile[]
+  kbFolder          kbFolder[]
+  BotFolder         BotFolder[]
+
+  @@index([unityId], map: "fk_knowledge_base_unity1_idx")
+  @@map("knowledgebase")
+}
+
+model kbFolder {
+  id              String  @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String  @db.VarChar(100)
+  knowLedgeBaseId String  @db.Uuid
+  isRoot          Boolean @default(false)
+
+  knowLedgeBase     knowLedgeBase       @relation(fields: [knowLedgeBaseId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_knowledge_base_kbfolder1")
+  institution       institution?        @relation(fields: [institutionId], references: [id])
+  institutionId     String?             @db.Uuid
+  knowLedgeBaseFile KnowledgebaseFile[]
+  BotFolder         BotFolder[]
+
+  @@map("kbFolder")
+}
+
+model Widget {
+  id               String @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  botId            String @db.Uuid
+  title            String @db.VarChar(150)
+  subTitle         String @db.VarChar(150)
+  headerIcon       String @db.VarChar(255)
+  headerColor      String @db.VarChar(20)
+  widgetIcon       String @db.VarChar(255)
+  widgetColor      String @db.VarChar(20)
+  avatarIcon       String @db.VarChar(255)
+  avatarColor      String @db.VarChar(20)
+  aiFirstMessage   String @db.VarChar(255)
+  aiMessageColor   String @db.VarChar(20)
+  userMessageColor String @db.VarChar(20)
+
+  bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_widget_bot1")
+
+  @@map("widget")
+}
+
+model unity {
+  id            String          @id @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId String          @db.Uuid
+  name          String?         @db.VarChar(45)
+  unityUuid     String?         @db.VarChar(45)
+  faviconUrl    String?         @db.VarChar(255)
+  theme         String?         @db.VarChar(45)
+  subdomain     String?         @db.VarChar(45)
+  bot           Bot[]
+  knowLedgeBase knowLedgeBase[]
+  institution   institution     @relation(fields: [institutionId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_unity_institutions1")
+
+  @@index([institutionId], map: "fk_unity_institutions1_idx")
+  @@map("unity")
+}
+
+model user {
+  id               String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userUuid         String?     @db.Uuid
+  name             String      @db.VarChar(45)
+  email            String      @unique @map("email") @db.VarChar(45)
+  password         String      @db.VarChar(255)
+  rememberMeToken  String?     @db.VarChar(255)
+  institutionUnity String?     @db.Text
+  institutionId    String      @db.Uuid
+  institution      institution @relation(fields: [institutionId], references: [id])
+  bot              Bot[]
+
+  @@map("user")
+}
+
+model KnowledgebaseFile {
+  id                 String  @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  institutionId      String? @db.Uuid
+  fileName           String? @db.VarChar(45)
+  internalStorageUrl String? @db.VarChar(255)
+  url                String? @db.Text
+  maskName           String? @db.Text
+  knowLedgeBaseId    String? @db.Uuid
+  kbFolderId         String? @db.Uuid
+
+  institution   institution?   @relation(fields: [institutionId], references: [id])
+  knowLedgeBase knowLedgeBase? @relation(fields: [knowLedgeBaseId], references: [id])
+
+  kbFolder kbFolder? @relation(fields: [kbFolderId], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_knowledge_base_kbfolder1")
+
+  @@id([id])
+  @@index([knowLedgeBaseId], name: "fk_knowledgebasefile_knowledgebase_idx")
+  @@index([kbFolderId], name: "fk_knowledgebasefile_kbfolder_idx")
+  @@map("knowledgebaseFile")
+}
